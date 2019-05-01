@@ -1,0 +1,21 @@
+[Unit]
+Description=Jenkins Docker Container as Service
+Documentation=https://jenkins.io/doc/
+Requires=docker.service
+
+[Service]
+EnvironmentFile=/etc/environment
+Type=simple
+NotifyAccess=all
+TimeoutSec=0
+RestartSec=2s
+Restart=always
+
+ExecStartPre=/usr/sbin/usermod -a -G docker ubuntu
+ExecStartPre=/bin/bash -c "/usr/bin/aws ecr get-login --no-include-email --region ${AWS_REGION} | bash"
+ExecStart=/usr/bin/systemd-docker --env run -d --name jenkins --privileged=true -v /var/jenkins_home:/var/jenkins_home -v /var/run/docker.sock:/var/run/docker.sock -p 8900:8080 -p 50000:50000 ${JENKINS_MASTER_DOCKER_REPO}
+
+ExecStop=/usr/bin/docker container stop jenkins
+
+[Install]
+WantedBy=cloud-init.target

@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  AvailabilityZone:
+    Description: "Availability Zone (AZ) - Volume must exist in the same AZ as the EC2 instance it's being mounted to"
+    Type: String
+    Default: us-east-2c
+  SnapshotId:
+    Description: "Snapshot Id from which to initialize the volume"
+    Type: String
+    Default: ''
+
+Conditions:
+  UseSnapshot: !Not [!Equals [ !Ref SnapshotId, '' ]]
+
+Resources:
+  JenkinsEBSVolume:
+    Type: AWS::EC2::Volume
+    DeletionPolicy: Snapshot
+    Properties:
+      AvailabilityZone: !Ref AvailabilityZone
+      Size: 40
+      SnapshotId: !If [UseSnapshot, !Ref SnapshotId, !Ref "AWS::NoValue"]
+      Tags:
+        -
+          Key: Name
+          Value: !Sub 'Jenkins EBS Volume for Stack: ${AWS::StackName} ${AWS::StackId}'
+
+Outputs:
+  VolumeID:
+    Description: Public IP for EC2 Instance
+    Value: !Ref JenkinsEBSVolume
+  FromSnapshotId:
+    Description: Volume created from SnapshotId?
+    Value: !Ref SnapshotId

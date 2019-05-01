@@ -1,0 +1,68 @@
+{
+    "Monitoring": {
+        "Enabled": false
+    }, 
+    "CpuOptions": {
+        "CoreCount": 1, 
+        "ThreadsPerCore": 2
+    }, 
+    "CapacityReservationSpecification": {
+        "CapacityReservationPreference": "open"
+    }, 
+    "ImageId": "ami-965e6bf3", 
+    "KeyName": "JenkinsServer", 
+    "BlockDeviceMappings": [
+        {
+            "DeviceName": "/dev/sda1", 
+            "Ebs": {
+                "SnapshotId": "snap-089f597d798b3e945", 
+                "DeleteOnTermination": true, 
+                "VolumeType": "gp2", 
+                "VolumeSize": 20
+            }
+        }, 
+        {
+            "DeviceName": "/dev/sdj", 
+            "Ebs": {
+                "Encrypted": false, 
+                "DeleteOnTermination": false, 
+                "VolumeType": "gp2", 
+                "VolumeSize": 40, 
+                "SnapshotId": ""
+            }
+        }
+    ], 
+    "HibernationOptions": {
+        "Configured": false
+    }, 
+    "EbsOptimized": false, 
+    "Placement": {
+        "Tenancy": "default", 
+        "GroupName": "", 
+        "AvailabilityZone": "us-east-2c"
+    }, 
+    "IamInstanceProfile": {
+        "Arn": "arn:aws:iam::546515125053:instance-profile/jenkins-iam-instance-profile-IamInstanceProfile-12O8VSKK8D3T4"
+    }, 
+    "InstanceType": "m5.large", 
+    "NetworkInterfaces": [
+        {
+            "DeviceIndex": 0, 
+            "Description": "JenkinsServer Network Interface", 
+            "PrivateIpAddresses": [
+                {
+                    "Primary": true, 
+                    "PrivateIpAddress": "172.31.41.204"
+                }
+            ], 
+            "SubnetId": "subnet-f38f5dbe", 
+            "DeleteOnTermination": false, 
+            "Groups": [
+                "sg-009c79b57f6f8828c", 
+                "sg-0d55b6636fc565d18"
+            ], 
+            "Ipv6Addresses": [], 
+            "AssociatePublicIpAddress": true
+        }
+    ]
+}

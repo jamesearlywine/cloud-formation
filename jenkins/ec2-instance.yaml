@@ -1,0 +1,265 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  SecurityGroupIds:
+    Description: "Security Groups"
+    Type: String
+    Default: ''
+  KeypairName:
+    Description: "Keypair Name to install for login to the server"
+    Type: String
+    Default: 'JenkinsServer'
+  NetworkInterfaceId:
+    Description: "Network Interface for JenkinsServer"
+    Type: String
+    Default: eni-0b4afa72f5885620b
+  JenkinsVolumeId:
+    Description: "EBS Volume for JenkinsServer home directory"
+    Type: String
+    Default: vol-00b88f877807c8339
+  IamInstanceProfileId:
+    Description: "IAM Instance Profile ID"
+    Type: String
+    Default: jenkins-iam-instance-profile-IamInstanceProfile-12O8VSKK8D3T4
+  JenkinsMasterDockerRepo:
+    Description: "JenkinsMaster Docker Repo"
+    Type: String
+    Default: 546515125053.dkr.ecr.us-east-2.amazonaws.com/jenkins-master:latest
+
+Resources:
+
+# @todo refactor EC2 instance into a spotfleetrequest
+# @todo update jenkins/root-stack.yaml to create all the resources including the ec2-spot
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: m5.large
+      ImageId: ami-965e6bf3
+      AvailabilityZone: !Sub ${AWS::Region}c
+      KeyName: !Ref KeypairName
+      IamInstanceProfile: !Ref IamInstanceProfileId
+      NetworkInterfaces:
+        -
+          NetworkInterfaceId: !Ref NetworkInterfaceId
+          DeviceIndex: 0
+          DeleteOnTermination: false
+      BlockDeviceMappings:
+        - DeviceName: "/dev/sda1"
+          Ebs:
+            DeleteOnTermination: true
+            VolumeType: gp2
+            VolumeSize: 20
+      UserData:
+        Fn::Base64: !Sub |
+          #!bin/bash -xe
+          apt-get update
+          apt-get -y install python-setuptools
+          easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+
+          /usr/local/bin/cfn-init -v --stack ${AWS::StackId} --resource EC2Instance --region ${AWS::Region}
+          /usr/local/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource EC2Instance --region ${AWS::Region}
+
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          default:
+            - APTPrep
+            - InstallBasicDependencies
+            - InstallAwsCli
+            - InstallDocker
+            - EnableDockerRemoteApi
+            - JenkinsHomeLateVolumeAttachment
+            - JenkinsHomeMount
+            - JenkinsService
+        APTPrep:
+          commands:
+            doAPTPrep:
+              command: |
+                #!/bin/bash
+                curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add
+                add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+                apt-get update
+
+        InstallBasicDependencies:
+          commands:
+            doInstallBasicDependencies:
+              command: apt-get install -y python3 unzip jq
+
+        InstallAwsCli:
+          commands:
+            a_InstallAwsCli_Install:
+              command: |
+                #!bin/bash
+                cd ~
+                curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
+                unzip awscli-bundle.zip
+                mkdir /opt/aws
+                ./awscli-bundle/install -i /opt/aws
+                chown -R ubuntu:staff /opt/aws
+                chmod -R 777 /opt/aws/bin
+                ln -s /opt/aws/bin/aws /usr/bin/aws
+
+            b_InstallAwsCli_EnvVars:
+              command: !Sub
+                - |
+                  #!/bin/bash
+                  echo AWS_REGION="${AWS::Region}" >> /etc/environment
+                  echo JENKINS_HOME_VOLUME_ID=${JENKINS_HOME_VOLUME_ID} >> /etc/environment
+                -
+                  JENKINS_HOME_VOLUME_ID: !Ref JenkinsVolumeId
+
+        InstallDocker:
+          commands:
+            doInstallDocker:
+              command: apt-get install -y docker-ce systemd-docker
+
+        EnableDockerRemoteApi:
+          files:
+            /lib/systemd/system/docker.service:
+              content: |
+                [Unit]
+                Description=Docker Application Container Engine
+                Documentation=https://docs.docker.com
+                BindsTo=containerd.service
+                After=network-online.target firewalld.service containerd.service
+                Wants=network-online.target
+                Requires=docker.socket
+
+                [Service]
+                Type=notify
+                # the default is not to use systemd for cgroups because the delegate issues still
+                # exists and systemd currently does not support the cgroup feature set required
+                # for containers run by docker
+                ExecStart=/usr/bin/dockerd -H tcp://0.0.0.0:4243 -H fd:// --containerd=/run/containerd/containerd.sock
+                ExecReload=/bin/kill -s HUP $MAINPID
+                TimeoutSec=0
+                RestartSec=2
+                Restart=always
+
+                # Note that StartLimit* options were moved from "Service" to "Unit" in systemd 229.
+                # Both the old, and new location are accepted by systemd 229 and up, so using the old location
+                # to make them work for either version of systemd.
+                StartLimitBurst=3
+
+                # Note that StartLimitInterval was renamed to StartLimitIntervalSec in systemd 230.
+                # Both the old, and new name are accepted by systemd 230 and up, so using the old name to make
+                # this option work for either version of systemd.
+                StartLimitInterval=60s
+
+                # Having non-zero Limit*s causes performance problems due to accounting overhead
+                # in the kernel. We recommend using cgroups to do container-local accounting.
+                LimitNOFILE=infinity
+                LimitNPROC=infinity
+                LimitCORE=infinity
+
+                # Comment TasksMax if your systemd version does not supports it.
+                # Only systemd 226 and above support this option.
+                TasksMax=infinity
+
+                # set delegate yes so that systemd does not reset the cgroups of docker containers
+                Delegate=yes
+
+                # kill only the docker process, not all processes in the cgroup
+                KillMode=process
+
+                [Install]
+                WantedBy=multi-user.target
+
+        JenkinsHomeLateVolumeAttachment:
+          commands:
+            doJenkinsHomeLateVolumeAttachment:
+              command: !Sub
+                - |
+                  #!/bin/bash
+                  aws ec2 attach-volume --device /dev/sdj --instance-id `wget -q -O - http://169.254.169.254/latest/meta-data/instance-id` --volume-id ${volumeId} --region ${AWS::Region}
+                -
+                  volumeId: !Ref JenkinsVolumeId
+
+        JenkinsHomeMount:
+          dependsOn:
+            - JenkinsHomeMountLateVolumeAttachment
+          files:
+            /etc/systemd/system/var-jenkins_home.mount:
+              content: |
+                # /etc/systemd/system/var-jenkins_home.mount
+                [Unit]
+                Description=Mount jenkins_home volume
+
+                [Mount]
+                What=/dev/nvme1n1
+                Where=/var/jenkins_home
+                Type=xfs
+
+                [Install]
+                WantedBy=multi-user.target
+              encoding: plain
+              group: ubuntu
+              owner: ubuntu
+              mode: 000644
+          commands:
+            doJenkinsHomeMount:
+              command: |
+                #!/bin/bash
+                usermod -a -G docker ubuntu
+                mkdir /var/jenkins_home
+                chown -R ubuntu:staff /var/jenkins_home
+                chmod 766 /var/jenkins_home
+                systemctl enable --now var-jenkins_home.mount
+
+        JenkinsService:
+          files:
+            /etc/systemd/system/jenkins.service:
+              content: !Sub
+                - |
+                  # /etc/systemd/system/jenkins.service
+                  [Unit]
+                  Description=Jenkins Docker Container as Service
+                  Documentation=https://jenkins.io/doc/
+                  After=docker.service
+                  Requires=docker.service
+
+                  [Service]
+                  Type=notify
+                  NotifyAccess=all
+                  TimeoutSec=0
+                  RestartSec=15s
+                  Restart=always
+
+                  EnvironmentFile=/etc/environment
+                  ExecStartPre=usermod -a -G docker ubuntu
+                  ExecStartPre=/bin/bash -c "/usr/bin/aws ecr get-login --no-include-email --region ${AWS_Region} | bash"
+                  ExecStart=/usr/bin/systemd-docker --env run -d --name jenkins --privileged=true -v /var/jenkins_home:/var/jenkins_home -v /var/run/docker.sock:/var/run/docker.sock -p 8900:8080 -p 50000:50000 ${JenkinsMasterDockerRepo}
+
+                  ExecStop=/usr/bin/docker container stop jenkins
+
+                  [Install]
+                  WantedBy=multi-user.target
+                -
+                  JenkinsMasterDockerRepo: !Ref JenkinsMasterDockerRepo
+                  AWS_Region: !Ref AWS::Region
+              encoding: plain
+              group: ubuntu
+              owner: ubuntu
+              mode: 000644
+          commands:
+            doJenkinsService:
+              command: |
+                #!/bin/bash
+                systemctl enable --now jenkins.service
+    # end Metadata
+  # end EC2Instance
+# end Resources
+
+Outputs:
+  PublicIp:
+    Description: Public IP for EC2 Instance
+    Value: !GetAtt EC2Instance.PublicIp
+  PublicDnsName:
+    Description: Public DNS Name for EC2 Instance
+    Value: !GetAtt EC2Instance.PublicDnsName
+  KeypairName:
+    Description: Name of ssh key installed on the server
+    Value: !Ref KeypairName
+  Ec2InstanceId:
+    Description: EC2 Instance ID
+    Value: !Ref EC2Instance

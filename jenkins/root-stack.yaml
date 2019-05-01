@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: "2010-09-09"
+# @todo spin up spotfleet and register the instance to use existing network interface
+
+# @todo add customer resources for github webhooks (lambda function)
+#   for now, registering github webhooks manually via their web interface, calls to http://jenkins.earlywine.info:8900/github-webhooks
+
+
+Parameters:
+  AvailabilityZone:
+    Description: Availability Zone to launch EC2 instance into
+    Type: String
+    Default: us-east-2c
+  VolumeSnapshotId:
+    Description: Snapshot Id from which to initialize the jenkins volume
+    Type: String
+    Default: snap-0de7553491a4e4f7c
+  JenkinsMasterDockerRepo:
+    Description: JenkinsMaster Docker Repo
+    Type: String
+    Default: 546515125053.dkr.ecr.us-east-2.amazonaws.com/jenkins-master:latest
+  JenkinsSSHKeypairName:
+    Description: Keypair Name
+    Type: String
+    Default: JenkinsServer
+
+Resources:
+  JenkinsHomeVolume:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://jle-cloudformation.s3.amazonaws.com/jenkins/ebs-volume.yaml
+      Parameters:
+        AvailabilityZone: !Ref AvailabilityZone
+        SnapshotId: !Ref VolumeSnapshotId
+      TimeoutInMinutes: 60
+
+  IAMInstanceProfile:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://jle-cloudformation.s3.amazonaws.com/jenkins/iam-instance-profile.yaml
+      TimeoutInMinutes: 60
+
+  SecurityGroupSSHFromHome:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://jle-cloudformation.s3.amazonaws.com/policy/security-group-ssh-from-home.yaml
+      TimeoutInMinutes: 60
+
+  SecurityGroupJenkinsWebAccess:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://jle-cloudformation.s3.amazonaws.com/policy/security-group-tcp-8900-all.yaml
+      TimeoutInMinutes: 60
+
+  JenkinsMasterEC2InstanceSpot:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://jle-cloudformation.s3.amazonaws.com/jenkins/ec2-instance-spot.yaml
+      Parameters:
+        JenkinsMasterDockerRepo: !Ref JenkinsMasterDockerRepo
+        KeypairName: !Ref JenkinsSSHKeypairName
+        SecurityGroupIdJenkinsWebAccess: !GetAtt SecurityGroupJenkinsWebAccess.Outputs.GroupId
+        SecurityGroupIdSSHFromHome: !GetAtt SecurityGroupSSHFromHome.Outputs.GroupId
+        IamInstanceProfileArn: !GetAtt IAMInstanceProfile.Outputs.IamInstanceProfileArn
+        JenkinsHomeVolumeID: !GetAtt JenkinsHomeVolume.Outputs.VolumeID
+      TimeoutInMinutes: 60
+
+Outputs:
+  KeypairName:
+    Description: Name of ssh key installed on the server
+    Value: !Ref JenkinsSSHKeypairName
+  EBSVolumeWarning:
+    Description: WARNING
+    Value: Deleting this stack creates a new snapshot of the JenkinsHome EBS volume

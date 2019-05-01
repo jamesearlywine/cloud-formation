@@ -1,0 +1,2 @@
+#!/bin/bash
+aws cloudformation create-stack --stack-name s3-config-storage-public --template-url https://jle-cloudformation.s3.amazonaws.com/jle-config-public/jle-config-public-s3.yaml --region us-east-2  --capabilities CAPABILITY_NAMED_IAM

@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: "2010-09-09"
+# @todo - add custom resources to update cloudflare dns entry for jenkins.earlywine.info (lambda/python)
+Metadata:
+  Description: Network Interface for JenkinsServer
+
+Parameters:
+  VPCId:
+    Description: VPC to create the security group into
+    Type: AWS::EC2::VPC::Id
+    Default: vpc-55c2b13c
+  SubnetId:
+    Description: "Subnet Id to attach network interface"
+    Type: String
+    Default: subnet-f38f5dbe
+
+Resources:
+
+  SecurityGroupSSHFromHome:
+    Type: AWS::CloudFormation::Stack
+    Description: SSH From Home Security Group
+    Properties:
+      TemplateURL: https://jle-cloudformation.s3.amazonaws.com/policy/security-group-ssh-from-home.yaml
+      Parameters:
+        VPCId: !Ref VPCId
+      TimeoutInMinutes: 60
+
+  SecurityGroupJenkinsWebAccess:
+    Type: AWS::CloudFormation::Stack
+    Description: Jenkins Web Access Security Group
+    Properties:
+      TemplateURL: https://jle-cloudformation.s3.amazonaws.com/policy/security-group-tcp-8900-all.yaml
+      Parameters:
+        VPCId: !Ref VPCId
+      TimeoutInMinutes: 60
+
+
+  EIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  AssociateControlPort:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt EIP.AllocationId
+      NetworkInterfaceId: !Ref NetworkInterface
+
+  NetworkInterface:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SubnetId: !Ref SubnetId
+      Description: JenkinsServer Network Interface
+      GroupSet:
+      - !GetAtt SecurityGroupSSHFromHome.Outputs.GroupId
+      - !GetAtt SecurityGroupJenkinsWebAccess.Outputs.GroupId
+      SourceDestCheck: true
+
+Outputs:
+  NetworkInterface:
+    Description: Network Interface
+    Value: !Ref NetworkInterface
+  EIP:
+    Description: Elastic IP
+    Value: !Ref EIP

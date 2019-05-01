@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: esilogix.com
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: 404.html
+    DeletionPolicy: Delete
+  WWWBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: www.esilogix.com
+      AccessControl: BucketOwnerFullControl
+      WebsiteConfiguration:
+        RedirectAllRequestsTo:
+          HostName:
+            Ref: S3Bucket
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      PolicyDocument:
+        Id: EsilogixComS3BucketPolicy
+        Version: '2012-10-17'
+        Statement:
+        -
+          Sid: PublicReadForGetBucketObjects
+          Effect: Allow
+          Principal: "*"
+          Action: s3:GetObject
+          Resource:
+            Fn::Join:
+              - 'arn:aws:s3:::'
+              - Ref: S3Bucket
+              - "/*"
+      Bucket:
+        Ref: S3Bucket

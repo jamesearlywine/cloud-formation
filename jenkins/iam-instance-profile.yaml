@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - ec2.amazonaws.com
+          Action:
+            - sts:AssumeRole
+
+  S3AdminRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: S3AdminRolePolicy
+      PolicyDocument:
+        Statement:
+          -
+            Effect: Allow
+            Action: "s3:*"
+            Resource: "*"
+      Roles:
+        - Ref: InstanceRole
+
+  ECRAdminRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: ECRAdminRolePolicy
+      PolicyDocument:
+        Statement:
+          -
+            Effect: Allow
+            Action: "ecr:*"
+            Resource: "*"
+      Roles:
+        - Ref: InstanceRole
+
+  EC2AdminRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: EC2AdminRolePolicy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        -
+          Effect: Allow
+          Action: ec2:*
+          Resource: "*"
+        -
+          Effect: Allow
+          Action: elasticloadbalancing:*
+          Resource: "*"
+        -
+          Effect: Allow
+          Action: cloudwatch:*
+          Resource: "*"
+        -
+          Effect: Allow
+          Action: autoscaling:*
+          Resource: "*"
+        -
+          Effect: Allow
+          Action: iam:CreateServiceLinkedRole
+          Resource: "*"
+          Condition:
+            StringEquals:
+              iam:AWSServiceName:
+              - autoscaling.amazonaws.com
+              - ec2scheduled.amazonaws.com
+              - elasticloadbalancing.amazonaws.com
+              - spot.amazonaws.com
+              - spotfleet.amazonaws.com
+              - transitgateway.amazonaws.com
+      Roles:
+        - Ref: InstanceRole
+
+  IamInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    DependsOn: [InstanceRole, S3AdminRolePolicy, ECRAdminRolePolicy, EC2AdminRolePolicy]
+    Properties:
+      Path: "/"
+      Roles:
+        - Ref: InstanceRole
+
+Outputs:
+  IamInstanceProfile:
+    Description: IamInstanceProfile
+    Value: !Ref IamInstanceProfile
+  IamInstanceProfileArn:
+    Description: Iam Instance Profile Arn
+    Value: !GetAtt IamInstanceProfile.Arn

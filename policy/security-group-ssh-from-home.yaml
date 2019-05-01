@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  VPCId:
+    Description: VPC to create the security group into
+    Type: AWS::EC2::VPC::Id
+    Default: vpc-55c2b13c
+  HomeIp:
+    Description: IP Address for home machine
+    Type: String
+    Default: 68.39.131.70
+
+Resources:
+  SecurityGroupSSHFromHome:
+    Type: "AWS::EC2::SecurityGroup"
+    Description: SSH From Home Security Group
+    Properties:
+      GroupDescription: SSH from Home
+      SecurityGroupIngress:
+        - CidrIp: !Sub ${HomeIp}/32
+          FromPort: 22
+          ToPort: 22
+          IpProtocol: tcp
+      VpcId: !Ref VPCId
+
+Outputs:
+  GroupId:
+    Description: Id for the SSH From Home Security Group
+    Value: !GetAtt SecurityGroupSSHFromHome.GroupId

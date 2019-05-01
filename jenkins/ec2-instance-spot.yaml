@@ -1,0 +1,136 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  SecurityGroupIdJenkinsWebAccess:
+    Description: Security Group Jenkins Web Access
+    Type: String
+    Default: sg-0d55b6636fc565d18
+  SecurityGroupIdSSHFromHome:
+    Description: Security Group SSH From Home
+    Type: String
+    Default: sg-009c79b57f6f8828c
+  KeypairName:
+    Description: Keypair Name to install for login to the server
+    Type: String
+    Default: JenkinsServer
+  IamInstanceProfileArn:
+    Description: IAM Instance Profile ARN
+    Type: String
+    Default: arn:aws:iam::546515125053:instance-profile/jenkins-iam-instance-profile-IamInstanceProfile-12O8VSKK8D3T4
+  JenkinsHomeVolumeID:
+    Description: EBS Volume for /var/jenkins_home directory (mount-point persistent Jenkins's volume)
+    Type: String
+    Default: vol-00b88f877807c8339
+  JenkinsHomeVolumeUUID:
+    Description: EBS Volume UUID for /var/jenkins_home directory (mount-point for persistent Jenkins's volume)
+    Type: String
+    Default: 45b6a949-3d8d-4684-b542-3a0abeafd05b
+  JenkinsMasterDockerRepo:
+    Description: JenkinsMaster Docker Repo
+    Type: String
+    Default: 546515125053.dkr.ecr.us-east-2.amazonaws.com/jenkins-master:latest
+
+Resources:
+  spotFleet:
+    Type: AWS::EC2::SpotFleet
+    Properties:
+      SpotFleetRequestConfigData:
+        TargetCapacity: 1
+        AllocationStrategy: diversified
+        IamFleetRole: !GetAtt spotFleetRole.Arn
+        LaunchSpecifications:
+          -
+            ImageId: ami-965e6bf3
+            InstanceType: r4.large
+            WeightedCapacity: 80
+            SubnetId: subnet-f38f5dbe
+            Placement:
+              AvailabilityZone: !Sub ${AWS::Region}c
+            KeyName: !Ref KeypairName
+
+            IamInstanceProfile:
+              Arn: !Ref IamInstanceProfileArn
+
+            SecurityGroups:
+              - GroupId: !Ref SecurityGroupIdJenkinsWebAccess
+              - GroupId: !Ref SecurityGroupIdSSHFromHome
+
+            BlockDeviceMappings:
+              - DeviceName: "/dev/sda1"
+                Ebs:
+                  DeleteOnTermination: true
+                  VolumeType: gp2
+                  VolumeSize: 20
+            EbsOptimized: true
+
+            UserData:
+              Fn::Base64:
+                Fn::Sub: |
+                  #!/bin/bash
+                  export JENKINS_MASTER_DOCKER_REPO=${JenkinsMasterDockerRepo}
+                  export JENKINS_HOME_VOLUME_ID=${JenkinsHomeVolumeID}
+                  export JENKINS_HOME_VOLUME_UUID=${JenkinsHomeVolumeUUID}
+                  export AWS_REGION=${AWS::Region}
+
+                  curl https://jle-config-public.s3.us-east-2.amazonaws.com/install-aws-ubuntu.sh | bash
+                  aws s3 cp s3://jle-cloudformation/jenkins/boot/userdata.sh - | bash
+          -
+            ImageId: ami-965e6bf3
+            InstanceType: m5.large
+            WeightedCapacity: 40
+            SubnetId: subnet-f38f5dbe
+            Placement:
+              AvailabilityZone: !Sub ${AWS::Region}c
+            KeyName: !Ref KeypairName
+
+            IamInstanceProfile:
+              Arn: !Ref IamInstanceProfileArn
+
+            SecurityGroups:
+              - GroupId: !Ref SecurityGroupIdJenkinsWebAccess
+              - GroupId: !Ref SecurityGroupIdSSHFromHome
+
+            BlockDeviceMappings:
+              - DeviceName: "/dev/sda1"
+                Ebs:
+                  DeleteOnTermination: true
+                  VolumeType: gp2
+                  VolumeSize: 20
+            EbsOptimized: true
+
+            UserData:
+              Fn::Base64:
+                Fn::Sub: |
+                  #!/bin/bash
+                  export JENKINS_MASTER_DOCKER_REPO=${JenkinsMasterDockerRepo}
+                  export JENKINS_HOME_VOLUME_ID=${JenkinsHomeVolumeID}
+                  export JENKINS_HOME_VOLUME_UUID=${JenkinsHomeVolumeUUID}
+                  export AWS_REGION=${AWS::Region}
+
+                  curl https://jle-config-public.s3.us-east-2.amazonaws.com/install-aws-ubuntu.sh | bash
+                  aws s3 cp s3://jle-cloudformation/jenkins/boot/userdata.sh - | bash
+
+  spotFleetRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - spotfleet.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetRole
+      Path: /
+    Type: AWS::IAM::Role
+
+
+Outputs:
+  KeypairName:
+    Description: Name of ssh key installed on the server
+    Value: !Ref KeypairName
+  StackName:
+    Description: AWS::StackName
+    Value: !Ref AWS::StackName

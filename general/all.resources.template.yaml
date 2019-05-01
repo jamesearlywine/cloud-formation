@@ -1,0 +1,540 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  zonelocal:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: local.
+      HostedZoneConfig:
+        Comment: Created by Route 53 Auto Naming
+  vpc55c2b13c:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 172.31.0.0/16
+      InstanceTenancy: default
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+  subnetdb2c6cb2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 172.31.0.0/20
+      AvailabilityZone: us-east-2a
+      VpcId:
+        Ref: vpc55c2b13c
+  subnetd4ff70af:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 172.31.16.0/20
+      AvailabilityZone: us-east-2b
+      VpcId:
+        Ref: vpc55c2b13c
+  subnetf38f5dbe:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 172.31.32.0/20
+      AvailabilityZone: us-east-2c
+      VpcId:
+        Ref: vpc55c2b13c
+  igw634bc30a:
+    Type: AWS::EC2::InternetGateway
+    Properties: {}
+  doptd680f8bf:
+    Type: AWS::EC2::DHCPOptions
+    Properties:
+      DomainName: us-east-2.compute.internal
+      DomainNameServers:
+      - AmazonProvidedDNS
+  acl4dc28524:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId:
+        Ref: vpc55c2b13c
+  rtba31854ca:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: vpc55c2b13c
+  eip1818819814:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  rdspersonaldev:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: '5'
+      AllowMajorVersionUpgrade: 'false'
+      AutoMinorVersionUpgrade: 'true'
+      DBInstanceClass: db.t2.micro
+      Port: '3306'
+      PubliclyAccessible: 'true'
+      StorageType: standard
+      BackupRetentionPeriod: '7'
+      MasterUsername: vvmysqlroot123
+      MasterUserPassword: MyPassword
+      PreferredBackupWindow: 07:00-07:30
+      PreferredMaintenanceWindow: fri:12:30-fri:13:00
+      DBName: MyDatabase
+      Engine: mysql
+      EngineVersion: 5.6.34
+      LicenseModel: general-public-license
+      DBSubnetGroupName: default
+      VPCSecurityGroups:
+      - Ref: sgdefault
+  s3cftemplates2nq9bft753hxuseast2:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      VersioningConfiguration:
+        Status: Suspended
+  s3esilogixcom:
+    Type: AWS::S3::Bucket
+    Properties:
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: 404.html
+      AccessControl: PublicRead
+      VersioningConfiguration:
+        Status: Suspended
+  s3indykaraoke:
+    Type: AWS::S3::Bucket
+    Properties:
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: 404.html
+      AccessControl: PublicRead
+      VersioningConfiguration:
+        Status: Suspended
+  s3indykaraokecom:
+    Type: AWS::S3::Bucket
+    Properties:
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: errorpages/404.html
+      AccessControl: PublicRead
+      VersioningConfiguration:
+        Status: Suspended
+  s3jamesearlywineinfo:
+    Type: AWS::S3::Bucket
+    Properties:
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: 404.html
+      AccessControl: PublicRead
+      VersioningConfiguration:
+        Status: Suspended
+  s3jlecloudformation:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      VersioningConfiguration:
+        Status: Suspended
+  s3jledeployments:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      VersioningConfiguration:
+        Status: Suspended
+  s3personaldevjenkins:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      VersioningConfiguration:
+        Status: Suspended
+  s3vendvortexcom:
+    Type: AWS::S3::Bucket
+    Properties:
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: errorpages/404.html
+      AccessControl: PublicRead
+      VersioningConfiguration:
+        Status: Suspended
+  s3wwwesilogixcom:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      VersioningConfiguration:
+        Status: Suspended
+  sgjlecloudformerWebServerSecurityGroup1QKKQLOCYAUYR:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTPS access via port 443
+      VpcId:
+        Ref: vpc55c2b13c
+  sgcloud9:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: cloud9
+      VpcId:
+        Ref: vpc55c2b13c
+      Tags:
+      - Key: Name
+        Value: cloud9
+  sgecscluster:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ecs-cluster
+      VpcId:
+        Ref: vpc55c2b13c
+      Tags:
+      - Key: Name
+        Value: personaldev-ecscluster
+  sgpersonaldevjenkins:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: personaldev-jenkins
+      VpcId:
+        Ref: vpc55c2b13c
+      Tags:
+      - Key: Name
+        Value: personaldev-jenkins
+  sgdefault:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: default VPC security group
+      VpcId:
+        Ref: vpc55c2b13c
+      Tags:
+      - Key: Name
+        Value: default-rds
+  sgloadbalancerwizard1:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: load-balancer-wizard-1 created on 2018-05-21T03:51:38.030-04:00
+      VpcId:
+        Ref: vpc55c2b13c
+      Tags:
+      - Key: Name
+        Value: personaldev-loadbalancer
+  dbsgdefault:
+    Type: AWS::RDS::DBSecurityGroup
+    Properties:
+      GroupDescription: default
+  s3policyesilogixcom:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: s3esilogixcom
+      PolicyDocument:
+        Version: '2012-10-17'
+        Id: EsilogixComS3BucketPolicy
+        Statement:
+        - Sid: PublicReadForGetBucketObjects
+          Effect: Allow
+          Principal: "*"
+          Action: s3:GetObject
+          Resource:
+            Fn::Join:
+            - ''
+            - - 'arn:aws:s3:::'
+              - esilogix
+              - ".com/*"
+  s3policyindykaraokecom:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: s3indykaraokecom
+      PolicyDocument:
+        Version: '2012-10-17'
+        Id: IndyKaraokeComStaticContentS3BucketPolicy
+        Statement:
+        - Sid: PublicReadForGetBucketObjects
+          Effect: Allow
+          Principal: "*"
+          Action: s3:GetObject
+          Resource:
+            Fn::Join:
+            - ''
+            - - 'arn:aws:s3:::'
+              - Ref: s3indykaraoke
+              - ".com/*"
+  s3policyjamesearlywineinfo:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: s3jamesearlywineinfo
+      PolicyDocument:
+        Version: '2012-10-17'
+        Id: JamesEarlywineInfoS3BucketPolicy
+        Statement:
+        - Sid: PublicReadForGetBucketObjects
+          Effect: Allow
+          Principal: "*"
+          Action: s3:GetObject
+          Resource:
+            Fn::Join:
+            - ''
+            - - 'arn:aws:s3:::'
+              - james
+              - ".earlywine.info/*"
+  s3policyvendvortexcom:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: s3vendvortexcom
+      PolicyDocument:
+        Version: '2012-10-17'
+        Id: VendVortexComStaticContentS3BucketPolicy
+        Statement:
+        - Sid: PublicReadForGetBucketObjects
+          Effect: Allow
+          Principal: "*"
+          Action: s3:GetObject
+          Resource:
+            Fn::Join:
+            - ''
+            - - 'arn:aws:s3:::'
+              - vendvortex
+              - ".com/*"
+  acl1:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: 0.0.0.0/0
+      Egress: 'true'
+      Protocol: "-1"
+      RuleAction: allow
+      RuleNumber: '100'
+      NetworkAclId:
+        Ref: acl4dc28524
+  acl2:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: 0.0.0.0/0
+      Protocol: "-1"
+      RuleAction: allow
+      RuleNumber: '100'
+      NetworkAclId:
+        Ref: acl4dc28524
+  subnetacl1:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      NetworkAclId:
+        Ref: acl4dc28524
+      SubnetId:
+        Ref: subnetd4ff70af
+  subnetacl2:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      NetworkAclId:
+        Ref: acl4dc28524
+      SubnetId:
+        Ref: subnetf38f5dbe
+  subnetacl3:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      NetworkAclId:
+        Ref: acl4dc28524
+      SubnetId:
+        Ref: subnetdb2c6cb2
+  gw1:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: vpc55c2b13c
+      InternetGatewayId:
+        Ref: igw634bc30a
+  route1:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId:
+        Ref: rtba31854ca
+      GatewayId:
+        Ref: igw634bc30a
+    DependsOn: gw1
+  dchpassoc1:
+    Type: AWS::EC2::VPCDHCPOptionsAssociation
+    Properties:
+      VpcId:
+        Ref: vpc55c2b13c
+      DhcpOptionsId:
+        Ref: doptd680f8bf
+  ingress1:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: sgjlecloudformerWebServerSecurityGroup1QKKQLOCYAUYR
+      IpProtocol: tcp
+      FromPort: '443'
+      ToPort: '443'
+      CidrIp: 0.0.0.0/0
+  ingress2:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: sgcloud9
+      IpProtocol: tcp
+      FromPort: '80'
+      ToPort: '80'
+      CidrIp: 0.0.0.0/0
+  ingress3:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: sgcloud9
+      IpProtocol: tcp
+      FromPort: '8080'
+      ToPort: '8080'
+      CidrIp: 0.0.0.0/0
+  ingress4:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: sgcloud9
+      IpProtocol: tcp
+      FromPort: '22'
+      ToPort: '22'
+      CidrIp: 0.0.0.0/0
+  ingress5:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: sgecscluster
+      IpProtocol: tcp
+      FromPort: '80'
+      ToPort: '80'
+      CidrIp: 0.0.0.0/0
+  ingress6:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: sgecscluster
+      IpProtocol: tcp
+      FromPort: '0'
+      ToPort: '65535'
+      SourceSecurityGroupId:
+        Ref: sgloadbalancerwizard1
+      SourceSecurityGroupOwnerId: '546515125053'
+  ingress7:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: sgecscluster
+      IpProtocol: tcp
+      FromPort: '0'
+      ToPort: '65535'
+      CidrIp: 0.0.0.0/0
+  ingress8:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: sgecscluster
+      IpProtocol: tcp
+      FromPort: '22'
+      ToPort: '22'
+      CidrIp: 73.146.119.37/32
+  ingress9:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: sgecscluster
+      IpProtocol: tcp
+      FromPort: '443'
+      ToPort: '443'
+      CidrIp: 0.0.0.0/0
+  ingress10:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: sgpersonaldevjenkins
+      IpProtocol: tcp
+      FromPort: '22'
+      ToPort: '22'
+      CidrIp: 68.39.131.70/32
+  ingress11:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: sgpersonaldevjenkins
+      IpProtocol: tcp
+      FromPort: '8900'
+      ToPort: '8900'
+      CidrIp: 0.0.0.0/0
+  ingress12:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: sgdefault
+      IpProtocol: tcp
+      FromPort: '3306'
+      ToPort: '3306'
+      CidrIp: 68.39.131.70/32
+  ingress13:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: sgloadbalancerwizard1
+      IpProtocol: tcp
+      FromPort: '80'
+      ToPort: '80'
+      CidrIp: 0.0.0.0/0
+  ingress14:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: sgloadbalancerwizard1
+      IpProtocol: tcp
+      FromPort: '8001'
+      ToPort: '8001'
+      CidrIp: 0.0.0.0/0
+  ingress15:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: sgloadbalancerwizard1
+      IpProtocol: tcp
+      FromPort: '8002'
+      ToPort: '8002'
+      CidrIp: 0.0.0.0/0
+  ingress16:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: sgloadbalancerwizard1
+      IpProtocol: tcp
+      FromPort: '443'
+      ToPort: '443'
+      CidrIp: 0.0.0.0/0
+  egress1:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId:
+        Ref: sgjlecloudformerWebServerSecurityGroup1QKKQLOCYAUYR
+      IpProtocol: "-1"
+      CidrIp: 0.0.0.0/0
+  egress2:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId:
+        Ref: sgcloud9
+      IpProtocol: "-1"
+      CidrIp: 0.0.0.0/0
+  egress3:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId:
+        Ref: sgecscluster
+      IpProtocol: "-1"
+      CidrIp: 0.0.0.0/0
+  egress4:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId:
+        Ref: sgpersonaldevjenkins
+      IpProtocol: "-1"
+      CidrIp: 0.0.0.0/0
+  egress5:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId:
+        Ref: sgdefault
+      IpProtocol: "-1"
+      CidrIp: 0.0.0.0/0
+  egress6:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId:
+        Ref: sgloadbalancerwizard1
+      IpProtocol: "-1"
+      CidrIp: 0.0.0.0/0
+Description: test
